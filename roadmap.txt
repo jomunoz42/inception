@@ -1,0 +1,91 @@
+
+
+                            INCEPTION
+
+
+Step 1 — Prepare the VM
+
+Goal:
+
+Install Debian
+Configure sudo/user
+Install Docker + Docker Compose
+Understand basic Linux networking/filesystem
+
+Focus theory:
+
+What a VM is
+Difference between VM and container
+Basic Linux commands
+What Docker does conceptually
+
+
+Step 2 — Learn Docker Basics by Practice
+
+Goal:
+
+Build and run simple containers manually
+
+Practice:
+
+docker build
+docker run
+docker ps
+docker exec
+docker logs
+
+Focus theory:
+
+image vs container
+Dockerfile basics
+volumes
+networks
+
+DO NOT touch WordPress yet.
+
+Step 3 — Learn Docker Compose
+
+Goal:
+
+Make multiple containers communicate
+
+Mini-project:
+
+nginx + simple service
+OR
+mariadb + adminer
+
+Focus theory:
+
+services
+networks
+volumes
+environment variables
+Step 4 — Build Mandatory Services One by One
+
+Order:
+
+MariaDB
+WordPress + php-fpm
+NGINX + SSL
+
+This order matters because:
+
+WP depends on DB
+NGINX depends on WP
+Step 5 — Connect Everything
+
+Goal:
+
+Full infrastructure working
+Persistent data
+HTTPS working
+Step 6 — Cleanup + Deep Understanding
+
+Goal:
+
+Understand every line
+Remove hacks
+Make restart/rebuild reliable
+
+This is where you prepare for evaluation.
