@@ -30,6 +30,7 @@ services:
       - wordpress_data:/var/www/html
     depends_on:
       - mariadb
+      - redis
     networks:
       - inception
     restart: unless-stopped
@@ -44,6 +45,14 @@ services:
       - wordpress_data:/var/www/html
     depends_on:
       - wordpress
+    networks:
+      - inception
+    restart: unless-stopped
+
+  redis:
+    build: requirements/bonus/redis
+    image: redis
+    container_name: redis
     networks:
       - inception
     restart: unless-stopped

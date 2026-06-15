@@ -49,6 +49,11 @@ if [ ! -f wp-config.php ]; then
         --user_pass=${WP_USER_PASSWORD}
 fi
 
+wp config set WP_REDIS_HOST redis --allow-root
+wp config set WP_REDIS_PORT 6379 --allow-root
+wp plugin install redis-cache --activate --allow-root || true
+wp redis enable --allow-root || true
+
 echo "Starting php-fpm..."
 
 exec /usr/sbin/php-fpm8.2 -F
