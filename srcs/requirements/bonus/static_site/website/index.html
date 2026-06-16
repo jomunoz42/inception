@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>João Muñoz - Curriculum</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="page">
+        <section class="hero">
+            <p class="tag">42 Lisboa · Software Development</p>
+            <h1>João Muñoz</h1>
+            <p class="summary">
+                Software developer trained at 42 with focus on systems programming,
+                low-level development, Unix environments, infrastructure and backend-oriented work.
+            </p>
+            <div class="actions">
+                <a class="button" href="cv.pdf" target="_blank">Open CV PDF</a>
+                <button onclick="showContact()">Show contact</button>
+            </div>
+            <p id="contact"></p>
+        </section>
+
+        <section class="grid">
+            <article>
+                <h2>Projects</h2>
+                <ul>
+                    <li><strong>Minishell</strong> — Unix shell implementation in C</li>
+                    <li><strong>Philosophers</strong> — threads, mutexes and synchronization</li>
+                    <li><strong>CPP Modules</strong> — object-oriented C++ projects</li>
+                    <li><strong>Inception</strong> — Docker infrastructure with NGINX, WordPress, MariaDB and bonuses</li>
+                </ul>
+            </article>
+
+            <article>
+                <h2>Skills</h2>
+                <ul>
+                    <li>C / C++ / Python</li>
+                    <li>Linux, Git, Docker</li>
+                    <li>Memory management, process control, parsing</li>
+                    <li>Automation and system-oriented problem solving</li>
+                </ul>
+            </article>
+        </section>
+
+        <section class="cv-preview">
+            <h2>Curriculum PDF</h2>
+            <p>The full curriculum is embedded below and can also be opened in a new tab.</p>
+            <iframe src="cv.pdf" title="João Muñoz Curriculum"></iframe>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

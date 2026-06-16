@@ -57,6 +57,16 @@ services:
       - inception
     restart: unless-stopped
 
+  static_site:
+    build: requirements/bonus/static_site
+    image: static_site
+    container_name: static_site
+    ports:
+      - "8080:8080"
+    networks:
+      - inception
+    restart: unless-stopped
+
 volumes:
   mariadb_data:
     driver: local
