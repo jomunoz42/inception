@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This document explains how to set up, build, run, and maintain the Inception infrastructure from scratch.
+This document explains how to set up, build, run, debug, and maintain the Inception infrastructure.
 
-It is intended for developers who need to understand the project's architecture and development workflow.
+It is intended for developers who need to understand the architecture, deployment process, and maintenance procedures of the project.
 
 ---
 
 # Prerequisites
 
-The project was developed on:
+The project was developed and tested on:
 
 * Debian 12 (Bookworm)
 * Docker
@@ -46,34 +46,36 @@ inception/
     ├── .env
     └── requirements/
         ├── mariadb/
-        │   ├── Dockerfile
-        │   └── tools/
+        ├── nginx/
         ├── wordpress/
-        │   ├── Dockerfile
-        │   └── tools/
-        └── nginx/
-            ├── Dockerfile
-            └── conf/
+        └── bonus/
+            ├── redis/
+            ├── adminer/
+            ├── ftp/
+            ├── static_site/
+            └── status_dashboard/
 ```
 
 ---
 
 # Initial Setup
 
-## Create Required Directories
+## Persistent Data Directories
 
-Persistent data is stored on the host machine:
+Create the host directories required by the project:
 
 ```bash
 mkdir -p /home/jomunoz42/data/mariadb
 mkdir -p /home/jomunoz42/data/wordpress
 ```
 
+These directories store persistent data outside containers.
+
 ---
 
-## Configure Environment Variables
+## Environment Variables
 
-Edit:
+Configure:
 
 ```text
 srcs/.env
@@ -94,9 +96,11 @@ WP_USER=user42
 WP_USER_EMAIL=user42@test.com
 ```
 
+Only non-sensitive values should be stored here.
+
 ---
 
-## Configure Docker Secrets
+## Secrets
 
 Create:
 
@@ -111,9 +115,12 @@ echo "root_password" > secrets/db_root_password.txt
 echo "database_password" > secrets/db_password.txt
 echo "admin_password" > secrets/wp_admin_password.txt
 echo "user_password" > secrets/wp_user_password.txt
+
+echo "ftpuser" > secrets/ftp_user.txt
+echo "ftppass" > secrets/ftp_password.txt
 ```
 
-Docker mounts these files inside containers through Docker secrets.
+Secrets are mounted inside containers and are ignored by Git.
 
 ---
 
@@ -127,13 +134,13 @@ Build and start:
 make
 ```
 
-Stop:
+Stop containers:
 
 ```bash
 make down
 ```
 
-Restart:
+Restart infrastructure:
 
 ```bash
 make restart
@@ -145,7 +152,7 @@ Rebuild everything:
 make re
 ```
 
-Clean containers:
+Remove containers:
 
 ```bash
 make clean
@@ -159,7 +166,7 @@ make fclean
 
 ---
 
-## Using Docker Compose Directly
+## Using Docker Compose
 
 Move to:
 
@@ -173,7 +180,7 @@ Build:
 docker-compose build
 ```
 
-Start:
+Launch:
 
 ```bash
 docker-compose up -d
@@ -188,7 +195,7 @@ docker-compose down
 Rebuild:
 
 ```bash
-docker-compose up --build
+docker-compose up --build -d
 ```
 
 ---
@@ -199,12 +206,12 @@ docker-compose up --build
 
 Responsibilities:
 
-* HTTPS endpoint
-* TLS handling
+* HTTPS entry point
+* TLS certificate management
 * Reverse proxy
-* FastCGI forwarding to PHP-FPM
+* FastCGI forwarding
 
-Exposed port:
+Port:
 
 ```text
 443
@@ -217,8 +224,9 @@ Exposed port:
 Responsibilities:
 
 * Execute PHP code
-* Host WordPress application
+* Serve WordPress application
 * Communicate with MariaDB
+* Use Redis cache
 
 Internal port:
 
@@ -233,8 +241,8 @@ Internal port:
 Responsibilities:
 
 * Store website data
-* Manage users and permissions
-* Persist WordPress content
+* Manage users
+* Persist posts, comments, settings and metadata
 
 Internal port:
 
@@ -244,29 +252,186 @@ Internal port:
 
 ---
 
+## Redis
+
+Responsibilities:
+
+* Object caching
+* Reduce database queries
+* Improve WordPress performance
+
+Internal port:
+
+```text
+6379
+```
+
+---
+
+## Adminer
+
+Responsibilities:
+
+* Database administration
+* MariaDB inspection
+* Query execution
+
+Public port:
+
+```text
+8081
+```
+
+---
+
+## FTP
+
+Responsibilities:
+
+* Remote file transfer
+* Shared access to WordPress files
+* Upload and download website content
+
+Public port:
+
+```text
+21
+```
+
+Passive ports:
+
+```text
+21100-21110
+```
+
+---
+
+## Static Portfolio Website
+
+Responsibilities:
+
+* Personal presentation page
+* Demonstration of static web hosting
+
+Public port:
+
+```text
+8080
+```
+
+---
+
+## Status Dashboard
+
+Responsibilities:
+
+* Centralized access page
+* Navigation hub for project services
+
+Public port:
+
+```text
+8082
+```
+
+---
+
 # Docker Network
 
-All services are connected through:
+All containers are attached to the dedicated Docker bridge network:
 
 ```text
 inception
 ```
 
-Docker network.
-
-Communication example:
+Communication examples:
 
 ```text
-NGINX
+nginx
   |
   v
 wordpress:9000
+
+wordpress
+  |
+  v
+mariadb:3306
+
+wordpress
+  |
+  v
+redis:6379
+
+adminer
   |
   v
 mariadb:3306
 ```
 
-Service names act as DNS names inside the network.
+Docker service names act as DNS names inside the network.
+
+---
+
+# Volumes
+
+## MariaDB Volume
+
+Host path:
+
+```text
+/home/jomunoz42/data/mariadb
+```
+
+Stores:
+
+* databases
+* tables
+* users
+* metadata
+
+---
+
+## WordPress Volume
+
+Host path:
+
+```text
+/home/jomunoz42/data/wordpress
+```
+
+Stores:
+
+* WordPress installation
+* themes
+* plugins
+* uploads
+* configuration files
+
+Shared by:
+
+```text
+WordPress
+FTP
+```
+
+---
+
+# Data Persistence
+
+Because the infrastructure uses persistent volumes:
+
+```text
+Container deletion
+≠
+Data deletion
+```
+
+Containers may be rebuilt without losing:
+
+* website content
+* database content
+* WordPress configuration
+* uploaded files
 
 ---
 
@@ -284,13 +449,19 @@ List all containers:
 docker ps -a
 ```
 
-Open a shell inside a container:
+Open a shell:
 
 ```bash
 docker exec -it nginx bash
 docker exec -it wordpress bash
 docker exec -it mariadb bash
+docker exec -it redis bash
+docker exec -it ftp bash
 ```
+
+---
+
+# Logs
 
 View logs:
 
@@ -298,9 +469,11 @@ View logs:
 docker logs nginx
 docker logs wordpress
 docker logs mariadb
+docker logs redis
+docker logs ftp
 ```
 
-Follow logs:
+Follow all logs:
 
 ```bash
 docker-compose logs -f
@@ -308,83 +481,7 @@ docker-compose logs -f
 
 ---
 
-# Managing Volumes
-
-List volumes:
-
-```bash
-docker volume ls
-```
-
-Inspect volume:
-
-```bash
-docker volume inspect mariadb_data
-docker volume inspect wordpress_data
-```
-
-Remove volumes:
-
-```bash
-docker-compose down -v
-```
-
----
-
-# Data Persistence
-
-The infrastructure uses Docker named volumes.
-
-MariaDB data:
-
-```text
-/home/jomunoz42/data/mariadb
-```
-
-Contains:
-
-* databases
-* tables
-* users
-* metadata
-
----
-
-WordPress data:
-
-```text
-/home/jomunoz42/data/wordpress
-```
-
-Contains:
-
-* WordPress files
-* themes
-* plugins
-* uploads
-* configuration files
-
----
-
-Because the data is stored outside containers:
-
-```text
-Container deletion
-≠
-Data deletion
-```
-
-Containers can be rebuilt while preserving application data.
-
----
-
-# Verification Commands
-
-Verify containers:
-
-```bash
-docker ps
-```
+# Useful Debugging Commands
 
 Verify website:
 
@@ -398,16 +495,71 @@ Expected:
 HTTP/1.1 200 OK
 ```
 
+---
+
+Verify Redis:
+
+```bash
+docker exec -it redis redis-cli ping
+```
+
+Expected:
+
+```text
+PONG
+```
+
+---
+
+Verify FTP:
+
+```bash
+lftp -u ftpuser,ftppass ftp://127.0.0.1
+```
+
+---
+
+Verify Adminer:
+
+Open:
+
+```text
+http://jomunoz42.42.fr:8081
+```
+
+---
+
 Verify Docker network:
 
 ```bash
 docker network inspect srcs_inception
 ```
 
-Verify persistence directories:
+---
+
+Verify persistence:
 
 ```bash
 ls -la /home/jomunoz42/data/mariadb
 ls -la /home/jomunoz42/data/wordpress
 ```
- 
+
+---
+
+# Verification Checklist
+
+After deployment:
+
+* NGINX reachable through HTTPS
+* WordPress accessible
+* MariaDB initialized
+* Redis connected
+* Adminer accessible
+* FTP login functional
+* Static website accessible
+* Dashboard accessible
+* Persistent volumes populated
+* Docker network operational
+
+If all checks pass, the infrastructure is correctly deployed.
+

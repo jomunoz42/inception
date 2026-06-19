@@ -6,122 +6,176 @@
 
 Inception is a System Administration project from the 42 curriculum focused on containerization using Docker and Docker Compose.
 
-The goal of the project is to build a small infrastructure composed of multiple isolated services running in dedicated Docker containers. Each service is responsible for a specific task and communicates with the others through a Docker network.
+The objective of the project is to build a small infrastructure composed of multiple isolated services running in dedicated Docker containers. Each service has a single responsibility and communicates with the others through a dedicated Docker network.
 
-The mandatory infrastructure contains:
+The infrastructure contains:
 
 * NGINX configured with TLSv1.2/TLSv1.3
 * WordPress with php-fpm
 * MariaDB
-* Persistent Docker volumes for database and website data
-* A dedicated Docker network connecting all services
-
-### Architecture
-
-```text
-Browser
-    |
- HTTPS (443)
-    |
-    v
-NGINX
-    |
- FastCGI
-    |
-    v
-WordPress + php-fpm
-    |
- SQL
-    |
-    v
-MariaDB
-```
-
-Data persistence is ensured through Docker volumes stored on the host machine.
+* Redis cache
+* Adminer
+* FTP server
+* Static portfolio website
+* Infrastructure status dashboard
+* Persistent Docker volumes
+* Dedicated Docker network
 
 ---
 
-## Docker Overview
+## Architecture
+
+```text
+                               WWW
+                                |
+      ---------------------------------------------------
+      |                 |                |             |
+     443              8080             8081          8082
+      |                 |                |             |
+   NGINX          Static Site         Adminer      Dashboard
+      |
+    9000
+      |
+ WordPress + php-fpm
+      |
+    3306
+      |
+   MariaDB
+
+WordPress <------> Redis (6379)
+
+FTP (21)
+   |
+   v
+WordPress Volume
+```
+
+Data persistence is ensured through Docker volumes stored on the host machine under:
+
+```text
+/home/jomunoz42/data
+```
+
+---
+
+# Docker Overview
 
 Docker allows applications and their dependencies to be packaged into isolated environments called containers.
 
 In this project:
 
-* Each service runs in its own container.
-* Containers communicate through a Docker network.
+* Each service runs inside its own container.
+* Containers communicate through a dedicated Docker network.
 * Docker volumes provide persistent storage.
-* Docker Compose orchestrates the entire infrastructure.
+* Docker Compose orchestrates the complete infrastructure.
 
-### Services
+---
 
-#### NGINX
+# Services
 
-* Only public entry point of the infrastructure
+## NGINX
+
+* Public entry point of the mandatory infrastructure
 * Exposes HTTPS on port 443
 * Handles TLS encryption
 * Forwards PHP requests to php-fpm
 
-#### WordPress + php-fpm
+## WordPress + php-fpm
 
 * Hosts the WordPress application
 * Executes PHP code through php-fpm
 * Communicates with MariaDB
+* Uses Redis object caching
 
-#### MariaDB
+## MariaDB
 
 * Stores WordPress data
 * Manages users, posts, comments, settings, and metadata
 
+## Redis
+
+* Object cache for WordPress
+* Stores frequently requested data in memory
+* Reduces database queries
+* Improves response times
+
+## Adminer
+
+* Web-based database administration interface
+* Connects directly to MariaDB
+* Allows inspection and management of database contents
+
+## FTP Server
+
+* Provides remote access to WordPress files
+* Shares the same WordPress volume used by WordPress
+* Allows uploading and downloading website files
+
+## Static Portfolio Website
+
+* Personal presentation website
+* Built using HTML, CSS and JavaScript
+* Completely independent from WordPress
+
+## Status Dashboard
+
+* Central access page for project services
+* Provides quick links to public services
+* Simplifies infrastructure administration
+
 ---
 
-## Design Choices
+# Design Choices
 
-### Virtual Machines vs Docker
+## Virtual Machines vs Docker
 
-#### Virtual Machines
+### Virtual Machines
 
 * Virtualize an entire operating system
-* Include a dedicated kernel
+* Include their own kernel
 * Consume more RAM and disk space
 * Slower startup times
 
-#### Docker
+### Docker
 
 * Virtualizes applications
 * Shares the host kernel
 * Lightweight and efficient
 * Fast startup times
 
-Docker is better suited for deploying multiple isolated services.
+Docker is particularly suited for infrastructures composed of multiple isolated services.
 
 ---
 
-### Secrets vs Environment Variables
+## Secrets vs Environment Variables
 
-#### Environment Variables
+### Environment Variables
 
-Used for non-sensitive configuration values such as:
+Used for non-sensitive configuration values:
 
 * Domain names
 * Usernames
 * Database names
+* Ports
 
-#### Docker Secrets
+### Docker Secrets
 
-Used for sensitive information such as:
+Used for sensitive information:
 
 * Database passwords
-* Administrator passwords
+* FTP credentials
+* WordPress administrator password
+* WordPress user password
 
-Secrets are mounted as files inside containers and avoid exposing credentials directly in configuration files.
+Secrets are mounted as files inside containers and avoid exposing credentials directly inside configuration files.
 
 ---
 
-### Docker Network vs Host Network
+## Docker Network vs Host Network
 
-#### Host Network
+### Host Network
 
-Containers share the host's network stack directly.
+Containers share the host networking stack.
 
 Advantages:
 
@@ -131,9 +185,9 @@ Disadvantages:
 
 * Reduced isolation
 * Port conflicts
-* Less secure
+* Lower security
 
-#### Docker Network
+### Docker Network
 
 Containers communicate through an isolated virtual network.
 
@@ -142,26 +196,27 @@ Advantages:
 * Better isolation
 * Automatic service discovery
 * Easier management
+* Increased security
 
 This project uses a dedicated Docker bridge network.
 
 ---
 
-### Docker Volumes vs Bind Mounts
+## Docker Volumes vs Bind Mounts
 
-#### Bind Mounts
+### Bind Mounts
 
 Direct mapping between a host directory and a container directory.
 
 Advantages:
 
-* Easy access to files from the host
+* Easy host-side access
 
 Disadvantages:
 
 * Tight coupling with host filesystem
 
-#### Docker Volumes
+### Docker Volumes
 
 Docker-managed persistent storage.
 
@@ -169,9 +224,9 @@ Advantages:
 
 * Better portability
 * Easier management
-* Recommended for persistent application data
+* Recommended for application data
 
-This project uses Docker named volumes whose data is stored under:
+This project uses persistent Docker volumes whose data is stored under:
 
 ```text
 /home/jomunoz42/data
@@ -179,26 +234,46 @@ This project uses Docker named volumes whose data is stored under:
 
 ---
 
-## Instructions
+# Bonus Features
 
-### Clone the Repository
+This implementation includes all bonus services:
+
+* Redis object cache
+* Adminer database administration interface
+* FTP server sharing the WordPress volume
+* Personal static portfolio website
+* Infrastructure status dashboard
+
+---
+
+# Instructions
+
+## Clone Repository
 
 ```bash
 git clone <repository_url>
 cd inception
 ```
 
-### Configure Environment
+## Configure Environment
 
-Create the required secrets and environment files.
+Create:
 
-Example:
-
-```bash
-mkdir secrets
+```text
+srcs/.env
 ```
 
-### Build and Start
+and:
+
+```text
+secrets/
+```
+
+with the required credentials.
+
+---
+
+## Build and Start
 
 ```bash
 make
@@ -208,16 +283,20 @@ or
 
 ```bash
 cd srcs
-docker-compose up --build
+docker-compose up --build -d
 ```
 
-### Stop Infrastructure
+---
+
+## Stop Infrastructure
 
 ```bash
 make down
 ```
 
-### Rebuild Infrastructure
+---
+
+## Rebuild Infrastructure
 
 ```bash
 make re
@@ -225,7 +304,7 @@ make re
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```text
 inception/
@@ -240,14 +319,20 @@ inception/
     └── requirements/
         ├── mariadb/
         ├── nginx/
-        └── wordpress/
+        ├── wordpress/
+        └── bonus/
+            ├── redis/
+            ├── adminer/
+            ├── ftp/
+            ├── static_site/
+            └── status_dashboard/
 ```
 
 ---
 
-## Resources
+# Resources
 
-### Official Documentation
+## Official Documentation
 
 * Docker Documentation
 * Docker Compose Documentation
@@ -255,24 +340,43 @@ inception/
 * MariaDB Documentation
 * WordPress Documentation
 * PHP-FPM Documentation
+* Redis Documentation
+* Adminer Documentation
+* VSFTPD Documentation
 
-### Learning Resources
+---
+
+## Learning Resources
 
 * Docker Deep Dive — Nigel Poulton
 * Docker Networking Documentation
 * Docker Volumes Documentation
+* Redis Official Documentation
+* WordPress Developer Documentation
 
-### AI Usage
+---
 
-AI tools were used as learning and assistance resources during development.
+## AI Usage
 
-They were used to:
+AI tools were used as learning assistants during development.
 
-* Understand Docker concepts
-* Clarify networking and volume behavior
+They were primarily used to:
+
+* Clarify Docker concepts
+* Understand Docker networking and Docker volumes
+* Understand container orchestration with Docker Compose
 * Review architecture decisions
-* Assist with debugging and troubleshooting
-* Improve documentation structure
+* Debug configuration issues
+* Improve project documentation
+* Reinforce system administration concepts
 
-All generated content was reviewed, tested, and adapted before being included in the project.
+All configurations, scripts, Dockerfiles, architecture decisions, and deployments were manually reviewed, tested, adapted, and validated before inclusion in the final project.
+
+---
+
+## Conclusion
+
+This project demonstrates the deployment of a complete containerized infrastructure using Docker Compose, emphasizing service isolation, networking, persistence, security, automation, and maintainability.
+
+The final infrastructure includes both the mandatory architecture and a complete set of bonus services, each running in its own dedicated container and integrated through a shared Docker ecosystem.
 

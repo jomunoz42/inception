@@ -2,31 +2,58 @@
 
 ## Overview
 
-This project provides a small web infrastructure built with Docker Compose.
+This project provides a complete containerized web infrastructure built with Docker Compose.
 
 The stack contains the following services:
 
 ### NGINX
 
-* HTTPS entry point of the infrastructure
+* Public HTTPS entry point
 * Listens on port 443
 * Handles TLS encryption
 * Forwards requests to WordPress
 
 ### WordPress + PHP-FPM
 
-* Hosts the website
+* Hosts the main website
 * Executes PHP code
 * Communicates with MariaDB
+* Uses Redis cache
 
 ### MariaDB
 
 * Stores website data
 * Manages users, posts, comments, settings, and metadata
 
+### Redis
+
+* Provides WordPress object caching
+* Reduces database queries
+* Improves response times
+
+### Adminer
+
+* Web-based database administration tool
+* Provides access to MariaDB through a browser
+
+### FTP Server
+
+* Provides remote access to WordPress files
+* Shares the WordPress volume
+
+### Static Portfolio Website
+
+* Personal presentation website
+* Independent from WordPress
+
+### Status Dashboard
+
+* Central access page for project services
+* Provides links to public services
+
 ---
 
-## Starting the Project
+# Starting the Project
 
 From the root of the repository:
 
@@ -44,7 +71,7 @@ This command:
 
 ---
 
-## Stopping the Project
+# Stopping the Project
 
 Stop all services:
 
@@ -61,7 +88,7 @@ docker-compose down
 
 ---
 
-## Restarting the Project
+# Restarting the Project
 
 ```bash
 make restart
@@ -76,9 +103,23 @@ docker-compose restart
 
 ---
 
-## Accessing the Website
+# Rebuilding the Infrastructure
 
-Open a web browser and navigate to:
+If configuration files, secrets, or Dockerfiles are modified:
+
+```bash
+make re
+```
+
+This rebuilds all containers while preserving persistent data.
+
+---
+
+# Accessing Services
+
+## Main Website
+
+Open:
 
 ```text
 https://jomunoz42.42.fr
@@ -86,11 +127,11 @@ https://jomunoz42.42.fr
 
 The connection uses HTTPS with a self-signed certificate.
 
-Depending on the browser, a security warning may appear because the certificate is not signed by a public Certificate Authority.
+A browser warning may appear because the certificate is not signed by a public Certificate Authority.
 
 ---
 
-## Accessing the WordPress Administration Panel
+## WordPress Administration Panel
 
 Open:
 
@@ -102,23 +143,63 @@ Use the administrator credentials configured during installation.
 
 ---
 
-## Credential Management
+## Adminer
 
-Credentials are stored locally and are not tracked by Git.
-
-Sensitive credentials are stored in:
+Open:
 
 ```text
-secrets/
+http://jomunoz42.42.fr:8081
 ```
 
-Examples:
+Use the MariaDB credentials.
+
+Example:
 
 ```text
-secrets/db_password.txt
+System: MariaDB
+Server: mariadb
+Username: wpuser
+Password: <database password>
+Database: wordpress
+```
+
+---
+
+## Static Portfolio Website
+
+Open:
+
+```text
+http://jomunoz42.42.fr:8080
+```
+
+---
+
+## Status Dashboard
+
+Open:
+
+```text
+http://jomunoz42.42.fr:8082
+```
+
+The dashboard provides links and information about the infrastructure.
+
+---
+
+# Credentials
+
+Sensitive credentials are stored locally and are not tracked by Git.
+
+Credential files:
+
+```text
 secrets/db_root_password.txt
+secrets/db_password.txt
 secrets/wp_admin_password.txt
 secrets/wp_user_password.txt
+secrets/ftp_user.txt
+secrets/ftp_password.txt
 ```
 
 Configuration values are stored in:
@@ -132,8 +213,9 @@ Examples:
 * Domain name
 * Usernames
 * Database name
+* Email addresses
 
-If credentials are modified, rebuild the infrastructure:
+If credentials are modified:
 
 ```bash
 make re
@@ -141,7 +223,32 @@ make re
 
 ---
 
-## Checking Service Status
+# FTP Usage
+
+Connect using:
+
+```bash
+lftp -u <ftp_user>,<ftp_password> ftp://127.0.0.1
+```
+
+Useful commands:
+
+```bash
+ls
+put file.txt
+get file.txt
+mkdir test
+rm file.txt
+bye
+```
+
+The FTP server shares the same volume used by WordPress.
+
+Files uploaded through FTP become immediately available inside the WordPress filesystem.
+
+---
+
+# Checking Service Status
 
 Display running containers:
 
@@ -155,19 +262,24 @@ Expected services:
 nginx
 wordpress
 mariadb
+redis
+adminer
+ftp
+static_site
+status_dashboard
 ```
 
 ---
 
-## Viewing Logs
+# Viewing Logs
 
-Display logs for all services:
+Display logs:
 
 ```bash
 docker-compose -f srcs/docker-compose.yml logs
 ```
 
-Follow logs in real time:
+Follow logs:
 
 ```bash
 docker-compose -f srcs/docker-compose.yml logs -f
@@ -175,15 +287,17 @@ docker-compose -f srcs/docker-compose.yml logs -f
 
 ---
 
-## Verifying Website Availability
+# Service Verification
 
-Check that the website responds correctly:
+## Website
+
+Verify HTTPS:
 
 ```bash
 curl -k -I https://jomunoz42.42.fr
 ```
 
-Expected result:
+Expected:
 
 ```text
 HTTP/1.1 200 OK
@@ -191,7 +305,51 @@ HTTP/1.1 200 OK
 
 ---
 
-## Data Persistence
+## Redis
+
+Verify Redis:
+
+```bash
+docker exec -it redis redis-cli ping
+```
+
+Expected:
+
+```text
+PONG
+```
+
+---
+
+## FTP
+
+Verify FTP access:
+
+```bash
+lftp -u <ftp_user>,<ftp_password> ftp://127.0.0.1
+```
+
+Expected:
+
+```text
+Successful login
+```
+
+---
+
+## Docker Network
+
+Verify network:
+
+```bash
+docker network inspect srcs_inception
+```
+
+All services should appear in the network inspection output.
+
+---
+
+# Data Persistence
 
 Project data is stored outside containers.
 
@@ -207,13 +365,21 @@ WordPress files:
 /home/jomunoz42/data/wordpress
 ```
 
-Because the data is stored in Docker volumes, it survives container deletion and recreation.
+Because data is stored in Docker volumes:
+
+```text
+Container deletion
+≠
+Data deletion
+```
+
+The website, database, uploads, plugins, themes, and WordPress configuration survive container recreation and system reboot.
 
 ---
 
-## Troubleshooting
+# Troubleshooting
 
-### Website Not Accessible
+## Website Not Accessible
 
 Check:
 
@@ -221,35 +387,47 @@ Check:
 docker ps
 ```
 
-Verify that:
-
-```text
-nginx
-wordpress
-mariadb
-```
-
-are running.
+Verify that all required containers are running.
 
 ---
 
-### Container Logs
+## Container Logs
 
-Inspect logs:
+Inspect individual logs:
 
 ```bash
 docker logs nginx
 docker logs wordpress
 docker logs mariadb
+docker logs redis
+docker logs ftp
 ```
 
 ---
 
-### Rebuild Everything
+## Rebuild Everything
 
 To completely rebuild the infrastructure:
 
 ```bash
 make re
 ```
+
+---
+
+# Administrator Checklist
+
+After deployment verify:
+
+* HTTPS website accessible
+* WordPress login functional
+* Adminer accessible
+* Redis responding
+* FTP login functional
+* Static website accessible
+* Dashboard accessible
+* Persistent volumes populated
+* Docker network operational
+
+If all checks pass, the infrastructure is functioning correctly.
 
